@@ -32,6 +32,7 @@ app.use(require('flatiron-cli-config'));
 app.use(require('./lib/plugins/domain/cli-domain'));
 app.use(require('./lib/plugins/workflow/cli-workflow'));
 app.use(require('./lib/plugins/activity/cli-activity'));
+app.use(require('./lib/plugins/decider/cli-decider'));
 app.version = true;
 
 //app.start();
