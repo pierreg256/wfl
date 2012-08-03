@@ -1,4 +1,4 @@
-Very simple CLI to learn how to play with Amazon Web Services' workflow engine : SWF
+# Very simple CLI to learn how to play with Amazon Web Services' workflow engine : SWF #
 
 WFL is a command line utility that helps define and run (very) simple workflows based on Amazon's SWF service. 
 You'll be able to learn how to use it in a simple way and, at the same time, leverage the great asynchonous capabilities
@@ -74,6 +74,7 @@ Syntax :
     help:    
     help:    wfl workflow list <domain-name>
     help:    wfl workflow create <domain-name> <workflow-name>
+    help:    wfl workflow start <domain-name> <workflow-name> [<input-value>]
     help:    
     help:    Options:
     help:      --secretAccessKey, -s  your AWS secret key  [string]
@@ -95,7 +96,22 @@ Syntax :
     help:      --accessKeyId, -k      your AWS access key  [string]
 
 
+## SWF Decider management
+Deciders are a specific activity type. For the sakes of simplicity, I decided to limit to one decider process per workflow.
+With the CLI you can strart a decider for a specific workflow with the following command :
+
+    $ wfl decider run <domain-name> <workflow-name>
+
+WFL framework will sarch for a nodejs module called **<domain-name>-<workflow-name>-decider.js** in the *workers* directory of WFL.
+Development of a decider must follow WFL coding rules (e.g. subclass the Decider 'class' provided by the WFL framework). 
+Implementation details in the *"How to code your own workflow activities with WFL"* of this readme file.
+
+
+
 # How to code your own workflow activities with WFL
+
+**TODO**
+
 
 # Author #
 
@@ -105,7 +121,8 @@ Written by Pierre Gilot - [Twitter](https://twitter.com/pierreg256).
 
 The MIT License : http://opensource.org/licenses/MIT
 
-Copyright (c) 2011-2012 Pierre Gilot
+Copyright &copy; 2012 Pierre Gilot
+
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
 documentation files (the 'Software'), to deal in the Software without restriction, including without limitation the
 rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit
