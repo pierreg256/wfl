@@ -102,7 +102,7 @@ With the CLI you can strart a decider for a specific workflow with the following
 
     $ wfl decider run <domain-name> <workflow-name>
 
-WFL framework will sarch for a nodejs module called **<domain-name>-<workflow-name>-decider.js** in the *workers* directory of WFL.
+WFL framework will sarch for a nodejs module called <*domain-name*>-<*workflow-name*>-**decider**.js in the *workers* directory of WFL.
 Development of a decider must follow WFL coding rules (e.g. subclass the Decider 'class' provided by the WFL framework). 
 Implementation details in the *"How to code your own workflow activities with WFL"* of this readme file.
 
