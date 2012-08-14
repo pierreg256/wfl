@@ -11,16 +11,15 @@ module.exports.run = function(options) {
 	    'domain'          : options.domain,
 	    'taskList'        : {'name': options.taskList}
 	}, 
-	function (err, decisionTaskData, continuePollingCallback){
+	function (err, decisionTaskData){
 		if (err) {
 			inspect(err, "Error");
-			continuePollingCallback(false);
 		} else {
-			console.log('got this decision task: ', decisionTaskData);
-			decisionTaskData.CompleteWorkflowExecution(function(err, result){
+			//decisionTaskData.completeWorkflowExecution(function(err, result){
+			decisionTaskData.failWorkflowExecution("rien a peter", function(err, result){
+			//decisionTaskData.scheduleActivityTask("tata", function(err, result){
 				inspect(err, 'Error');
 				inspect(result, 'Result');
-				continuePollingCallback(true);
 			});
 		}
 });
