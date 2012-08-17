@@ -16,8 +16,8 @@ module.exports.run = function(options) {
 			inspect(err, "Error");
 		} else {
 			//decisionTaskData.completeWorkflowExecution(function(err, result){
-			decisionTaskData.failWorkflowExecution("rien a peter", function(err, result){
-			//decisionTaskData.scheduleActivityTask("tata", function(err, result){
+			//decisionTaskData.failWorkflowExecution("rien a peter", function(err, result){
+			decisionTaskData.scheduleActivityTask("acti", function(err, result){
 				inspect(err, 'Error');
 				inspect(result, 'Result');
 			});
