@@ -8,8 +8,8 @@
 
   options = {
     domain: "wfl-dev-2",
-    accessKeyId: "AKIAIATQL3JD74DEDPTQ",
-    secretAccessKey: "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",
+    accessKeyId: "AKI4DEDPTQ",
+    secretAccessKey: "/YBzjQIEEMum0ZxVOj6jIVCS",
     force: true
   };
 
