@@ -8,8 +8,6 @@
 
   options = {
     domain: "wfl-dev-2",
-    accessKeyId: "AKIAIATQL3JD74DEDPTQ",
-    secretAccessKey: "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",
     force: true
   };
 
@@ -25,15 +23,25 @@
 
   app.makeDecision("/start", function(request, response) {
     inspect(request, "Request");
-    return response.scheduleActivity("hello");
+    return response.scheduleActivity("hello", "my name");
   });
 
   app.makeDecision("/start/hello", function(request, response) {
-    if (req.success) {
-      response.scheduleActivity("world");
-    }
-    if (request.failed) {
-      return response.cancel();
+    switch (request.task.status) {
+      case "SCHEDULED":
+      case "STARTED":
+        return app.logger.debug("activity hello status: " + request.task.status);
+      case "TIMED_OUT":
+        app.logger.debug("activity hello timed out, cancelling the workflow");
+        return response.cancel("activity hello timed out");
+      case "COMPLETED":
+        app.logger.debug("activity hello completed");
+        if (request.success) {
+          return response.scheduleActivity("world");
+        }
+        break;
+      default:
+        return response.cancel();
     }
   });
 
@@ -46,6 +54,6 @@
       name: "toto",
       filePath: "/dev/null"
     });
-  }, 5000);
+  }, 25000);
 
 }).call(this);

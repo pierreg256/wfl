@@ -16,6 +16,9 @@ class DecisionResponse
 		) for acti of @app.options.activities
 		@_scheduleActivityTask activityName, taskList, inputValue
 
+	cancel: (reason)->
+		@_failWorkflowExecution(reason)
+
 	_respondCompleted : (decisions, callBack) ->
 		swfCfg = 
 	        "TaskToken": @token
@@ -48,7 +51,7 @@ class DecisionResponse
 		cBack = callBack ? (err)->
 			console.log("Error executing: failWorkflowExecution") if err?
 
-		@respondCompleted decisions, cBack
+		@_respondCompleted decisions, cBack
 
 	_scheduleActivityTask: (activityName, taskList, inputValue, callBack) ->
 		decisions = [
@@ -63,7 +66,7 @@ class DecisionResponse
 					"name": taskList
 		]
 
-		inspect decisions
+		#inspect decisions
 		cBack = callBack ? (err)->
 			console.log("Error executing: scheduleActivityTask") if err?
 
