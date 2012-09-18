@@ -3,8 +3,6 @@ inspect = require('eyes').inspector();
 
 options = {
 	domain: "wfl-dev-2"
-	accessKeyId : "AKIAIATQL3JD74DEDPTQ"
-	secretAccessKey : "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"
 	force: true
 }
 app = wfl(options)
@@ -17,15 +15,24 @@ app.useActivity "world", (request, response)->
 
 app.makeDecision "/start", (request, response)->
 	inspect request, "Request"
-	response.scheduleActivity("hello");
+	response.scheduleActivity("hello", "my name");
 
 app.makeDecision "/start/hello", (request, response)->
-	response.scheduleActivity "world" if req.success
-	response.cancel() if request.failed
+	switch request.task.status
+		when "SCHEDULED", "STARTED" 
+			app.logger.debug "activity hello status: #{request.task.status}"
+		when "TIMED_OUT"
+			app.logger.debug "activity hello timed out, cancelling the workflow"
+			response.cancel("activity hello timed out")
+		when "COMPLETED"
+			app.logger.debug "activity hello completed"
+			response.scheduleActivity "world" if request.success
+		else
+			response.cancel() 
 
 app.logger.info "Starting application"
 
 app.listen()
 setInterval ()->
 	app.start({name:"toto", filePath:"/dev/null"})
-,5000
+,25000
