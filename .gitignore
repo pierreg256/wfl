@@ -1,3 +1,5 @@
+*.js
+swf-config.json
 node_modules
 /config/config.json
 .DS_Store

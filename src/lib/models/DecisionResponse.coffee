@@ -19,6 +19,17 @@ class DecisionResponse
 	cancel: (reason)->
 		@_failWorkflowExecution(reason)
 
+	end: (result)->
+		result ?= ""
+		if typeof result isnt "string"
+			result = "" + JSON.stringify result
+		decisions = [
+			"decisionType":"CompleteWorkflowExecution"
+			"completeWorkflowExecutionDecisionAttributes":
+				"result": result
+		]
+		@_respondCompleted decisions
+
 	_respondCompleted : (decisions, callBack) ->
 		swfCfg = 
 	        "TaskToken": @token
@@ -38,7 +49,7 @@ class DecisionResponse
 			"completeWorkflowExecutionDecisionAttributes":
 				"result": "Finished !"
 		]
-		@respondCompleted decisions, callBack
+		@_respondCompleted decisions, callBack
 
 
 	_failWorkflowExecution: (reason, details..., callBack)-> 

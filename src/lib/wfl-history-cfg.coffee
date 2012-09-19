@@ -40,13 +40,13 @@ wflHistoryCfg =
 		"type": "activity"
 		"status": "COMPLETED"
 		"discard": [
-				"startedEventId"
+				"activityTaskCompletedEventAttributes.startedEventId"
 			]
 		"info":
-			"_eventId": "scheduledEventId"
+			"_eventId": "activityTaskCompletedEventAttributes.scheduledEventId"
 			"name": "activityTaskScheduledEventAttributes.activityType.name"
 			"id": "activityTaskScheduledEventAttributes.activityId"
-			"input": "activityTaskScheduledEventAttributes.input"
+			"__result": "activityTaskCompletedEventAttributes.result"
 
 	"ActivityTaskTimedOut":
 		"type": "activity"

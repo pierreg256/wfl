@@ -1,11 +1,12 @@
-inspect = require('eyes').inspector();
-
-awssum = require('awssum');
+inspect = require('eyes').inspector()
+path = require 'path'
+awssum = require 'awssum'
 amazon = awssum.load('amazon/amazon');
 Swf = awssum.load('amazon/swf').Swf;
 wfl_history = require("./wfl-history-cfg").cfg
 
 DecisionResponse = require("./models/DecisionResponse").DecisionResponse
+ActivityResponse = require("./models/ActivityResponse").ActivityResponse
 
 createApplication = (options) ->
 	app = new Application(options)
@@ -14,21 +15,28 @@ createApplication = (options) ->
 
 class Application
 	constructor: (options)->
+
+		@config = require 'nconf'
+		@config.argv().env().file({ file: './swf-config.json' });
+		@config.save (err)->
+			inspect err, "Config save error" if err?
 		# Check the options and define the default values 
 		options ?= {}
 		@options = options
-		@options.force ?= false
-		@options.accessKeyId ?= "BAD_KEY"
-		@options.secretAccessKey ?= "BAD_SECRET_KEY"
-		@options.region ?= "us-east-1"
-		@options.domain ?= "sample-domain"
-		@options.name ?= "sample-workflow"
+		@options.force ?= @config.get("force") ? false
+		@options.accessKeyId ?= @config.get("accessKeyId") ? "BAD_KEY"
+		@options.secretAccessKey ?= @config.get("secretAccessKey") ? "BAD_SECRET_KEY"
+		@options.region ?= @config.get("region") ? "us-east-1"
+		@options.domain ?= @config.get("domain") ? "sample-domain"
+		@options.name ?= @config.get("name") ? "sample-workflow"
 		@options.decider ?= {}
 		@options.decider.name ?= "#{@options.domain}-#{@options.name}-decider"
 		@options.decider.taskList ?= () =>
 			"#{@options.domain}-#{@options.name}-decider-default-tasklist"
 		@options.decider.routes = [];
 		@options.activities = [];
+
+		#inspect @options, "Options:"
 
 		@configStatus = 0;
 
@@ -44,6 +52,7 @@ class Application
       			new (winston.transports.Console)({'colorize':true})
     		]
 		});
+
 
 	useActivity: (name, activityFn)->
 		@options.activities.push {"name":name, "taskList": "#{name}-default-tasklist", "activityTask": activityFn}
@@ -125,7 +134,7 @@ class Application
 
 		@swf.PollForActivityTask swfCfg, (err, data)=>
 			if err?
-				@logger.error "Unexpected Error", err
+				@logger.error "Unexpected Error polling #{swfCfg.TaskList.name} ", err
 			else
 				body = data.Body
 				token = body.taskToken
@@ -134,7 +143,26 @@ class Application
 					process.nextTick ()=>@_listenForActivity name, taskList
 				else
 					@logger.debug "TODO: call activity function here!"
-					#inspect data, "activity Data"
+					request = 
+						name: body.activityType.name
+						id: body.activityId
+						workflowId: body.workflowExecution.workflowId
+						input: ""
+						task: body
+					try
+						request.input = JSON.parse(body.input ? "")
+					catch e
+						request.input = body.input ? {}
+
+					response =  new ActivityResponse this, token
+					#inspect body, "activity data"
+					#inspect request, "activity request"
+					(
+						if @options.activities[i].name is request.name
+							@logger.debug "Running the following activity: #{@options.activities[i].name} "
+							@options.activities[i].activityTask request, response
+					) for i of @options.activities
+
 			process.nextTick ()=>
 				@_listenForActivity name, taskList
 
@@ -163,8 +191,8 @@ class Application
 							if @options.decider.routes[tmpRoute].route is request.url
 								@logger.debug "Making following decision: #{@options.decider.routes[tmpRoute].route}"
 								@options.decider.routes[tmpRoute].decisionTask request, response
-							else
-								@logger.debug "#{@options.decider.routes[tmpRoute].route} is not #{request.url}"
+							#else
+							#	@logger.debug "#{@options.decider.routes[tmpRoute].route} is not #{request.url}"
 						) for tmpRoute of @options.decider.routes
 						#@logger.debug route, request
 
@@ -194,7 +222,6 @@ _makeRoute = (events, callBack) ->
 	response = {}
 	route = []
 	history = []
-	#for (i=0; i<events.length; i++) 
 
 	#nouvel essai
 	pos = events.length - 1
@@ -226,6 +253,9 @@ _makeRoute = (events, callBack) ->
 				if (info.charAt(0) isnt "_")
 					#console.log "info: #{info}: #{evt_tool.info[info]}: #{_getProp source_evt, evt_tool.info[info]}"
 					task[info]=_getProp source_evt, evt_tool.info[info]
+				else
+					if info.charAt(1) is "_"
+						task[info.substring(2)]=_getProp evt, evt_tool.info[info]
 			) for info of evt_tool.info
 
 			#inspect request, "Resulting request"
@@ -273,7 +303,7 @@ _makeRoute = (events, callBack) ->
 
 	) for i of history
 	#inspect history, "final generated history"
-	inspect request, "final generated request"
+	#inspect request, "final generated request"
 
 	callBack null, request
 	return

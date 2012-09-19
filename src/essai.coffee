@@ -1,10 +1,12 @@
 wfl = require './lib/wfl'
 inspect = require('eyes').inspector();
 
-options = {
+options = 
 	domain: "wfl-dev-2"
-	force: true
-}
+	accessKeyId: "AKIAIATQL3JD74DEDPTQ"
+	secretAccessKey: "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"
+	force: true 
+
 app = wfl(options)
 
 app.useActivity "hello", (request, response)->
