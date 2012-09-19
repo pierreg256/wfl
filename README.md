@@ -1,4 +1,4 @@
-# Very simple CLI to learn how to play with Amazon Web Services' workflow engine : SWF #
+# Very simple FRAMEWORK to learn how to play with Amazon Web Services' workflow engine : SWF #
 
 WFL is a command line utility that helps define and run (very) simple workflows based on Amazon's SWF service. 
 You'll be able to learn how to use it in a simple way and, at the same time, leverage the great asynchonous capabilities
@@ -17,96 +17,47 @@ and, *above all*
     $ git clone https://github.com/pierreg256/wfl.git
 
 # Dependencies #
-wfl uses flatiron from nodejitsu and the awssum library. Be sure to npm them before use.
-*Note*: awssum is under active development and I advise to use the latest builds from github instead of npm.
+wfl uses various flatiron utilities from nodejitsu and the awssum library. Be sure to npm them before use.
 
-# How to use WFL CLI#
-The CLI portion of WFL will help you define the overall workflow architecture. Two options can be used at every command :
-* --secretAccessKey, -s  the secret key from your AWS account
-* --accessKeyId, -k      the access key from your AWS account
+# Create a WFL application (an Amazon SWF instance)#
 
+    var wfl = require('wfl');
+    app = wfl();
+
+    app.listen();
+
+This will create an AWS SWF domain and a workflow type for that domain. The ```listen()``` command will start the workflow engine to begin to accept requests
+To work correctly, ```wfl```needs your AWS credentials (secret access key and access key id). 
+You can provide them through an ```options```object :
 *Note* : For your own security I strongly encourage you to create a dedicated, limited SWF user account in the IAM section of your Amazon account and use its keys.
 This will ensure that, if you get stolen your keys you just need to regenerate them for this specific account ;-)
 
-Also, as the usage of keys and secret keys can be cumbersome at one point, you can store those keys in the configuration of the CLI.
-Just use the followin lines of code once:
+    var wfl = require('wfl');
+    var options = {
+        secretAccessKey: "/YBzjQIExFEXAMPLEum0ZxKEYjIVCS",
+        accessKeyId: "AKACCESSL3JKEYDEDPID"
+    }
+    app = wfl(options);
 
-    $ wfl config set secretAccessKey "/YBzjQIExFEXAMPLEum0ZxKEYjIVCS"
-    $ wfl config set accessKeyId "AKACCESSL3JKEYDEDPID"
-    
-All the subsequent call to wfl will use these credentials unless:
-* you use specify ones with the ```-k``` and ```-s``` modifiers
-* you configure new ones with the ```wfl config set``` commands
+    app.listen();
 
-## SWF Domain management
-Syntax : 
+But you can also provide options via the command line :
 
-    $ wfl domain
-    
-    help:    wfl domain * commands allow you manage your worflow
-    help:    domains. Valid commands are:
-    help:    
-    help:    wfl domain list
-    help:    wfl domain create <domain-name>
-    help:    
-    help:    Options:
-    help:      --secretAccessKey, -s  your AWS secret key  [string]
-    help:      --accessKeyId, -k      your AWS access key  [string]
+    node app.js --accessKeyId "AKACCESSL3JKEYDEDPID" --secretAccessKey "/YBzjQIExFEXAMPLEum0ZxKEYjIVCS"
 
-Use:
+More options can be provided in the same way :
+* force : entitles SWF to create the domain, workflow types, activity types if/when necessary for you. Default value is ```false```
+* region : the AWS region endpoint to reach when calling AWS APIs. Default value is ```us-east-1```
+* domain : the name of the AWS domain you want to work with. Default value is ```sample-domain```
+* name : the name of the workkflow type you want to work with. Default value is ```sample-workflow```
 
-    $ wfl domain create <domain-name>
-    
-To REGISTER a domain in your AWS account.
+# Describe an activity Task  #
 
-To get the list of active REGISTERED domains type:
+**TODO**
 
-    $ wfl domain list 
+# Decision Routing #
 
-
-## SWF Workflow types management
-Syntax :
-
-    $ wfl workflow
-    
-    help:    wfl workflow * commands allow you manage your worflow
-    help:    Valid commands are:
-    help:    
-    help:    wfl workflow list <domain-name>
-    help:    wfl workflow create <domain-name> <workflow-name>
-    help:    wfl workflow start <domain-name> <workflow-name> [<input-value>]
-    help:    
-    help:    Options:
-    help:      --secretAccessKey, -s  your AWS secret key  [string]
-    help:      --accessKeyId, -k      your AWS access key  [string]
-
-## SWF Activity types management
-Syntax :
-
-    $ wfl activity
-    
-    help:    wfl activity * commands allow you manage your worflow
-    help:    activitys. Valid commands are:
-    help:    
-    help:    wfl activity list <domain-name> <workflow-name>
-    help:    wfl activity create <domain-name> <workflow-name> <activity-name>
-    help:    
-    help:    Options:
-    help:      --secretAccessKey, -s  your AWS secret key  [string]
-    help:      --accessKeyId, -k      your AWS access key  [string]
-
-
-## SWF Decider management
-Deciders are a specific activity type. For the sakes of simplicity, I decided to limit to one decider process per workflow.
-With the CLI you can strart a decider for a specific workflow with the following command :
-
-    $ wfl decider run <domain-name> <workflow-name>
-
-WFL framework will sarch for a nodejs module called <*domain-name*>-<*workflow-name*>-**decider**.js in the *workers* directory of WFL.
-Development of a decider must follow WFL coding rules (e.g. subclass the Decider 'class' provided by the WFL framework). 
-Implementation details in the *"How to code your own workflow activities with WFL"* of this readme file.
-
-
+**TODO**
 
 # How to code your own workflow activities with WFL
 

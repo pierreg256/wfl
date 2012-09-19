@@ -1,19 +1,21 @@
 {
-  "description": "simple workflow using AWS SWF",
-  "version": "0.0.0",
-  "private": true,
-  "dependencies": {
-    "flatiron": "0.2.5"
-  },
-  "devDependencies": {
-    "cli-easy": "0.1.0",
-    "vows": "0.6.1"
-  },
-  "scripts": {
-    "test": "vows --spec",
-    "start": "node app.js"
-  },
   "name": "wfl",
-  "author": "Pierre Gilot",
-  "homepage": "aws.amazon.com/swf"
+  "version": "0.1.0",
+  "author": "Pierre Gilot <pgilot@amazon.fr>",
+  "description": "simple workflow framework using AWS SWF",
+
+  "main" : "./lib/wfl",
+
+  "dependencies": {
+    "awssum"  : "0.10.x",
+    "nconf"   : "0.6.x",
+    "winston" : "0.6.x",
+    "eyes"    : "0.7.x"
+  },
+
+  "homepage": "aws.amazon.com/swf",
+
+  "engines": {
+    "node": ">=0.6"
+  }
 }
