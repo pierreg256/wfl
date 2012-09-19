@@ -1,6 +1,6 @@
 # Very simple FRAMEWORK to learn how to play with Amazon Web Services' workflow engine : SWF #
 
-WFL is a command line utility that helps define and run (very) simple workflows based on Amazon's SWF service. 
+WFL is a framework that helps define and run (very) simple workflows based on Amazon's SWF service. 
 You'll be able to learn how to use it in a simple way and, at the same time, leverage the great asynchonous capabilities
 of nodejs!
 
@@ -52,8 +52,11 @@ More options can be provided in the same way :
 * name : the name of the workkflow type you want to work with. Default value is ```sample-workflow```
 
 # Describe an activity Task  #
+The app.useActivity() method provides way to describe activity types (name of an activity) and the code to be executed when the activity is fired. The following snippet describes a very simple 'Hello World' activity:
 
-**TODO**
+    app.useActivity ("helloworld_activity", function (request, response) {
+        response.send("Hello, " + request.input + "!");
+    });
 
 # Decision Routing #
 
