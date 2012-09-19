@@ -10,7 +10,7 @@
     "awssum"  : "0.10.x",
     "nconf"   : "0.6.x",
     "winston" : "0.6.x",
-    "eyes"    : "0.7.x"
+    "eyes"    : "*"
   },
 
   "homepage": "aws.amazon.com/swf",
