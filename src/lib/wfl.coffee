@@ -49,7 +49,7 @@ class Application
 		winston = require 'winston'
 		@logger = new (winston.Logger)({
     		transports: [
-      			new (winston.transports.Console)({'colorize':true})
+      			new (winston.transports.Console)({'colorize':true, level:'verbose'})
     		]
 		});
 
@@ -140,7 +140,7 @@ class Application
 				token = body.taskToken
 				if not token?
 					@logger.info "No activity task in the pipe for #{taskList}, repolling..."
-					process.nextTick ()=>@_listenForActivity name, taskList
+					#process.nextTick ()=>@_listenForActivity name, taskList
 				else
 					@logger.debug "TODO: call activity function here!"
 					request = 
@@ -283,6 +283,7 @@ _makeRoute = (events, callBack) ->
 		url: ""
 
 	history = history.reverse()
+	lastActivityId = ""
 	(
 		tmp = history[i]
 		if tmp.workflowTask? and tmp.workflowTask.status is "STARTED"
@@ -290,7 +291,8 @@ _makeRoute = (events, callBack) ->
 			task = tmp.workflowTask
 
 		if tmp.activityTask? 
-			request.url += "/#{tmp.activityTask.name}" if request.url.lastIndexOf(tmp.activityTask.name)<request.url.length-tmp.activityTask.name.length
+			#request.url += "/#{tmp.activityTask.name}" if request.url.lastIndexOf(tmp.activityTask.name)<request.url.length-tmp.activityTask.name.length
+			request.url += "/#{tmp.activityTask.name}" if lastActivityId isnt tmp.activityTask.id
 			request.input = "" if tmp.activityTask.status is "SCHEDULED"
 			task = tmp.activityTask
 
@@ -302,79 +304,10 @@ _makeRoute = (events, callBack) ->
 		request.task = task
 
 	) for i of history
-	#inspect history, "final generated history"
-	#inspect request, "final generated request"
+	inspect history, "final generated history"
+	inspect request, "final generated request"
 
-	callBack null, request
-	return
-	throw "on s'arrete là pour le moment :-)"
-
-	(
-			
-#			@logger.debug evt_tool.hasOwnProperty(evt_tool.)
-
-		handled = false
-		if events[event].eventType is "WorkflowExecutionStarted"
-			handled = true
-			if route[route.length] isnt "start"
-				route.push "start"
-				request = 
-					workFlow:
-						name: events[event].workflowExecutionStartedEventAttributes.workflowType.name
-						version: events[event].workflowExecutionStartedEventAttributes.workflowType.version
-						input: ""
-					decisionTask:
-						name:""
-						status:"NONE"
-				try
-					request.workFlow.input = JSON.parse(events[event].workflowExecutionStartedEventAttributes.input)
-				catch e
-					request.workFlow.input = events[event].workflowExecutionStartedEventAttributes.input ? {}
-
-
-		if events[event].eventType is "DecisionTaskScheduled"
-			handled = true
-			request.decisionTask.name = events[event].decisionTaskScheduledEventAttributes.taskList.name
-			request.decisionTask.status = "SCHEDULED"
-
-		if events[event].eventType is "DecisionTaskStarted"
-			handled = true
-			request.decisionTask.status = "STARTED"
-
-		if events[event].eventType is "DecisionTaskCompleted"
-			handled = true
-			request.decisionTask.status = "COMPLETED"
-
-		if events[event].eventType is "DecisionTaskTimedOut"
-			handled = true
-			request.decisionTask.status = "TIMED_OUT"
-
-		if events[event].eventType is "ActivityTaskScheduled"
-			handled = true
-			activityName = events[event].activityTaskScheduledEventAttributes.activityType.name
-			if route[route.length] isnt activityName
-				route.push activityName
-				request = 
-					activityTask:
-						name:activityName
-						status:"SCHEDULED"
-						input: ""
-				try
-					request.activityTask.input = JSON.parse(events[event].activityTaskScheduledEventAttributes.input)
-				catch e
-					request.activityTask.input = events[event].activityTaskScheduledEventAttributes.input ? {}
-
-		if events[event].eventType is "ActivityTaskStarted"
-			handled = true
-
-		if handled isnt true
-			inspect events, "Evenement #{events[event].name}"
-			throw "Unhandled event type : #{events[event].eventType}"
-
-	) for event of events
-	
-	request.url = "/"+route.toString().replace(",","/")
-	callBack null, request
+	return callBack null, request
 
 _checkDomain = (swf, domainName, force, callBack) ->
 	force ?= false
