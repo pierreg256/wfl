@@ -14,7 +14,7 @@
   app = wfl(options);
 
   app.useActivity("checkVideo", function(request, response) {
-    app.logger.verbose("" + request.task.id + " - Checking video: " + request.input.url);
+    app.logger.verbose("" + request.id + " - Checking video: " + request.input.url);
     return response.send({
       status: "OK",
       message: "Found Video in S3",
@@ -23,7 +23,7 @@
   });
 
   app.useActivity("shortenVideo", function(request, response) {
-    app.logger.verbose("" + request.task.id + " - Shortening video: " + request.input.url);
+    app.logger.verbose("" + request.id + " - Shortening video: " + request.input.url);
     return response.send({
       status: "OK",
       message: "Video Shortened successfully"
@@ -31,15 +31,16 @@
   });
 
   app.useActivity("catCheck", function(request, response) {
-    app.logger.verbose("" + request.task.id + " - Checking video: " + request.input.url + " for cats");
+    app.logger.verbose("" + request.id + " - Checking video: " + request.input.url + " for cats");
     return response.send({
       status: "OK",
-      message: "Clean Video"
+      message: "Clean Video",
+      cats: false
     });
   });
 
   app.useActivity("rejectVideo", function(request, response) {
-    app.logger.verbose("" + request.task.id + " - Rejected video: " + request.input.url + ". sending email to the user");
+    app.logger.verbose("" + request.id + " - Rejected video: " + request.input.url + ". sending email to the user");
     return response.send({
       status: "OK",
       message: "Video Rejected"
@@ -47,7 +48,7 @@
   });
 
   app.useActivity("transcodeVideo", function(request, response) {
-    app.logger.verbose("" + request.task.id + " - Transcoding video: " + request.input.url + ".");
+    app.logger.verbose("" + request.id + " - Transcoding video: " + request.input.url + ".");
     return response.send({
       status: "OK",
       message: "Transcoded to format H264/AAC"
@@ -55,7 +56,7 @@
   });
 
   app.useActivity("publishVideo", function(request, response) {
-    app.logger.verbose("" + request.task.id + " - Publishing video: " + request.input.url + ". sending email to the user");
+    app.logger.verbose("" + request.id + " - Publishing video: " + request.input.url + ". sending email to the user");
     return response.send({
       status: "OK",
       message: "Video Published"
@@ -63,7 +64,7 @@
   });
 
   app.makeDecision("/start", function(request, response) {
-    app.logger.verbose("Starting Workflow....");
+    app.logger.verbose("Sceduling activity checkVideo");
     return response.scheduleActivity("checkVideo", {
       url: request.input.url
     });
@@ -93,31 +94,76 @@
             });
           }
         } else {
+          app.logger.verbose("Activity " + request.task.id + " responded in error, cancelling...");
           return response.cancel("Activity " + request.task.id + " responded in error...");
         }
         break;
       default:
+        app.logger.verbose("Activity " + request.task.id + " ended with an unknown status of " + request.task.status + "... cancelling");
         return response.cancel("Activity " + request.task.id + " ended with an unknown status of " + request.task.status + "... cancelling");
     }
   });
 
-  app.makeDecision("/start/hello/world", function(request, response) {
+  app.makeDecision("/start/checkVideo/shortenVideo", function(request, response) {
+    app.logger.verbose("Activity " + request.task.id + " responded with the following status: " + request.task.status);
     switch (request.task.status) {
       case "SCHEDULED":
       case "STARTED":
-        return app.logger.debug("activity world status: " + request.task.status);
+        return response.wait();
       case "TIMED_OUT":
-        app.logger.debug("activity world timed out, cancelling the workflow");
-        return response.cancel("activity world timed out");
+        app.logger.verbose("Activity " + request.task.id + " timed out, cancelling the workflow");
+        return response.cancel("Activity " + request.task.id + " timed out");
       case "COMPLETED":
-        app.logger.debug("activity world completed with the following result: " + request.task.result + " ");
-        return response.end(request.task.result);
+        app.logger.verbose("Activity " + request.task.id + " completed, checking result...");
+        if (request.task.result.status === "OK") {
+          app.logger.verbose("Sceduling activity catCheck");
+          return response.scheduleActivity("catCheck", {
+            url: request.input.url
+          });
+        } else {
+          app.logger.verbose("Activity " + request.task.id + " responded in error, cancelling...");
+          return response.cancel("Activity " + request.task.id + " responded in error...");
+        }
+        break;
       default:
-        return response.cancel("unknown status detected... cancelling");
+        app.logger.verbose("Activity " + request.task.id + " ended with an unknown status of " + request.task.status + "... cancelling");
+        return response.cancel("Activity " + request.task.id + " ended with an unknown status of " + request.task.status + "... cancelling");
     }
   });
 
-  app.logger.info("Starting application");
+  app.makeDecision("/start/checkVideo/shortenVideo/catCheck", function(request, response) {
+    app.logger.verbose("Activity " + request.task.id + " responded with the following status: " + request.task.status);
+    switch (request.task.status) {
+      case "SCHEDULED":
+      case "STARTED":
+        return response.wait();
+      case "TIMED_OUT":
+        app.logger.verbose("Activity " + request.task.id + " timed out, cancelling the workflow");
+        return response.cancel("Activity " + request.task.id + " timed out");
+      case "COMPLETED":
+        app.logger.verbose("Activity " + request.task.id + " completed, checking result...");
+        if (request.task.result.status === "OK") {
+          if (request.task.result.cats === true) {
+            app.logger.verbose("Sceduling activity rejectVideo");
+            return response.scheduleActivity("rejectVideo", {
+              url: request.input.url
+            });
+          } else {
+            app.logger.verbose("Sceduling activity transcodeVideo");
+            return response.scheduleActivity("transcodeVideo", {
+              url: request.input.url
+            });
+          }
+        } else {
+          app.logger.verbose("Activity " + request.task.id + " responded in error, cancelling...");
+          return response.cancel("Activity " + request.task.id + " responded in error...");
+        }
+        break;
+      default:
+        app.logger.verbose("Activity " + request.task.id + " ended with an unknown status of " + request.task.status + "... cancelling");
+        return response.cancel("Activity " + request.task.id + " ended with an unknown status of " + request.task.status + "... cancelling");
+    }
+  });
 
   app.listen();
 
