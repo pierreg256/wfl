@@ -165,6 +165,61 @@
     }
   });
 
+  app.makeDecision("/start/checkVideo/shortenVideo/catCheck/transcodeVideo", function(request, response) {
+    app.logger.verbose("Activity " + request.task.id + " responded with the following status: " + request.task.status);
+    switch (request.task.status) {
+      case "SCHEDULED":
+      case "STARTED":
+        return response.wait();
+      case "TIMED_OUT":
+        app.logger.verbose("Activity " + request.task.id + " timed out, cancelling the workflow");
+        return response.cancel("Activity " + request.task.id + " timed out");
+      case "COMPLETED":
+        app.logger.verbose("Activity " + request.task.id + " completed, checking result...");
+        if (request.task.result.status === "OK") {
+          app.logger.verbose("Sceduling activity publishVideo");
+          return response.scheduleActivity("publishVideo", {
+            url: request.input.url
+          });
+        } else {
+          app.logger.verbose("Activity " + request.task.id + " responded in error, cancelling...");
+          return response.cancel("Activity " + request.task.id + " responded in error...");
+        }
+        break;
+      default:
+        app.logger.verbose("Activity " + request.task.id + " ended with an unknown status of " + request.task.status + "... cancelling");
+        return response.cancel("Activity " + request.task.id + " ended with an unknown status of " + request.task.status + "... cancelling");
+    }
+  });
+
+  app.makeDecision("/start/checkVideo/shortenVideo/catCheck/transcodeVideo/publishVideo", function(request, response) {
+    app.logger.verbose("Activity " + request.task.id + " responded with the following status: " + request.task.status);
+    switch (request.task.status) {
+      case "SCHEDULED":
+      case "STARTED":
+        return response.wait();
+      case "TIMED_OUT":
+        app.logger.verbose("Activity " + request.task.id + " timed out, cancelling the workflow");
+        return response.cancel("Activity " + request.task.id + " timed out");
+      case "COMPLETED":
+        app.logger.verbose("Activity " + request.task.id + " completed, checking result...");
+        if (request.task.result.status === "OK") {
+          app.logger.verbose("Workflow Terminated, signaling end of workflow");
+          return response.end({
+            status: "OK",
+            message: "Video Published, workflow successfully completed!"
+          });
+        } else {
+          app.logger.verbose("Activity " + request.task.id + " responded in error, cancelling...");
+          return response.cancel("Activity " + request.task.id + " responded in error...");
+        }
+        break;
+      default:
+        app.logger.verbose("Activity " + request.task.id + " ended with an unknown status of " + request.task.status + "... cancelling");
+        return response.cancel("Activity " + request.task.id + " ended with an unknown status of " + request.task.status + "... cancelling");
+    }
+  });
+
   app.listen();
 
 }).call(this);

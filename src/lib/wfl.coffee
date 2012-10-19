@@ -1,5 +1,6 @@
 inspect = require('eyes').inspector()
 path = require 'path'
+spawn = require('child_process').spawn
 awssum = require 'awssum'
 amazon = awssum.load('amazon/amazon')
 Swf = awssum.load('amazon/swf').Swf
@@ -23,11 +24,12 @@ class Application
 		#@config.save (err)->
 		#	inspect err, "Config save error" if err?
 		# Check the options and define the default values 
+
 		options ?= {}
 		@options = options
 		@options.force ?= @config.get("force") ? false
-		@options.accessKeyId ?= @config.get("accessKeyId") ? "BAD_KEY"
-		@options.secretAccessKey ?= @config.get("secretAccessKey") ? "BAD_SECRET_KEY"
+		@options.accessKeyId ?= @config.get("accessKeyId") ? @config.get("AWS_ACCESS_KEY") ? "BAD_KEY"
+		@options.secretAccessKey ?= @config.get("secretAccessKey") ? @config.get("AWS_SECRET_KEY") ? "BAD_SECRET_KEY"
 		@options.region ?= @config.get("region") ? "us-east-1"
 		@options.domain ?= @config.get("domain") ? "sample-domain"
 		@options.name ?= @config.get("name") ? "sample-workflow"
@@ -128,20 +130,71 @@ class Application
 
 
 	_startListeners: ()->
-		startActivities = "YES"
-		startDecider = "YES"
-		if @config.get('activitiesOnly')
-			startDecider = "NO"
-		if @config.get('deciderOnly')
-			startActivities = "NO"
-		@logger.info "Workflow application #{@options.domain}/#{@options.name} listening with the following options:"
-		@logger.info "   listen for decision tasks: #{startDecider}"
-		@logger.info "   listen for activity tasks: #{startActivities}"
-		@options.decider.listen() if startDecider is "YES"
-		(
-			#@logger.debug @options.activities[activ].name #, @options.activities[activ].taskList 
-			activ.poll() if startActivities is "YES"
-		) for activ, i in @options.activities
+
+		if @config.get("startDecider")
+			@logger.debug("starting decider")
+			@options.decider.listen()
+		else
+			#console.log "got: #{@config.get('startActivity')}"
+			if @config.get("startActivity")
+				activityName = @config.get("startActivity")
+				(
+					if activ.name is activityName
+						activ.poll()
+				) for activ, i in @options.activities
+				@logger.debug "Starting activity: #{@config.get("startActivity")}"
+			else
+				(
+					@logger.debug "Spawning activity #{activ.name}"
+					activityProcess = spawn "node", ["#{module.parent.filename}", "--startActivity",  "#{activ.name}", "--noCheck"]
+					activityProcess.stdout.on('data', (data)->
+						console.log(data.toString().substr(0, data.toString().length-1))
+					)
+					activityProcess.stderr.on('data', (data)->
+						console.error(data.toString().substr(0, data.toString().length-1))
+					)
+					activityProcess.on('end', (data)=>
+						@logger.debug('end of decider background process...')
+					)
+					activityProcess.on('exit', (code)=>
+						if code isnt 0
+							@logger.error "Activity #{activ.name} background process ended abnormally, quitting"
+							process.exit 1
+					)
+				) for activ, i in @options.activities
+
+				@logger.debug("Spawning decider")
+				deciderProcess = spawn "node", ["#{module.parent.filename}", "--startDecider", "--noCheck"]
+				deciderProcess.stdout.on('data', (data)->
+					console.log(data.toString().substr(0, data.toString().length-1))
+				)
+				deciderProcess.stderr.on('data', (data)->
+					console.log(data.toString().substr(0, data.toString().length-1))
+				)
+				deciderProcess.on('end', (data)=>
+					@logger.debug('end of decider background process...')
+				)
+				deciderProcess.on('exit', (code)=>
+					if code isnt 0
+						@logger.error "Decider background process ended abnormally, quitting"
+						process.exit 1
+				)
+
+
+		#startActivities = "YES"
+		#startDecider = "YES"
+		#if @config.get('activitiesOnly')
+		#	startDecider = "NO"
+		#if @config.get('deciderOnly')
+		#	startActivities = "NO"
+		#@logger.info "Workflow application #{@options.domain}/#{@options.name} listening with the following options:"
+		#@logger.info "   listen for decision tasks: #{startDecider}"
+		#@logger.info "   listen for activity tasks: #{startActivities}"
+		#@options.decider.listen() if startDecider is "YES"
+		#(
+		#	#@logger.debug @options.activities[activ].name #, @options.activities[activ].taskList 
+		#	activ.poll() if startActivities is "YES"
+		#) for activ, i in @options.activities
 		#process.nextTick ()=>@_listen()
 
 #	_listenForActivity: (activityObject)->

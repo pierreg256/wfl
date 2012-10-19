@@ -104,6 +104,46 @@ app.makeDecision "/start/checkVideo/shortenVideo/catCheck", (request, response)-
 			app.logger.verbose "Activity #{request.task.id} ended with an unknown status of #{request.task.status}... cancelling"
 			response.cancel "Activity #{request.task.id} ended with an unknown status of #{request.task.status}... cancelling"
 
+app.makeDecision "/start/checkVideo/shortenVideo/catCheck/transcodeVideo", (request, response)->
+	app.logger.verbose "Activity #{request.task.id} responded with the following status: #{request.task.status}"
+	switch request.task.status
+		when "SCHEDULED", "STARTED" 
+			response.wait()
+		when "TIMED_OUT"
+			app.logger.verbose "Activity #{request.task.id} timed out, cancelling the workflow"
+			response.cancel("Activity #{request.task.id} timed out")
+		when "COMPLETED"
+			app.logger.verbose "Activity #{request.task.id} completed, checking result..."
+			if request.task.result.status is "OK"
+				app.logger.verbose "Sceduling activity publishVideo"
+				response.scheduleActivity "publishVideo", {url:request.input.url}
+			else
+				app.logger.verbose "Activity #{request.task.id} responded in error, cancelling..."
+				response.cancel "Activity #{request.task.id} responded in error..."
+		else
+			app.logger.verbose "Activity #{request.task.id} ended with an unknown status of #{request.task.status}... cancelling"
+			response.cancel "Activity #{request.task.id} ended with an unknown status of #{request.task.status}... cancelling"
+
+app.makeDecision "/start/checkVideo/shortenVideo/catCheck/transcodeVideo/publishVideo", (request, response)->
+	app.logger.verbose "Activity #{request.task.id} responded with the following status: #{request.task.status}"
+	switch request.task.status
+		when "SCHEDULED", "STARTED" 
+			response.wait()
+		when "TIMED_OUT"
+			app.logger.verbose "Activity #{request.task.id} timed out, cancelling the workflow"
+			response.cancel("Activity #{request.task.id} timed out")
+		when "COMPLETED"
+			app.logger.verbose "Activity #{request.task.id} completed, checking result..."
+			if request.task.result.status is "OK"
+				app.logger.verbose "Workflow Terminated, signaling end of workflow"
+				response.end({status: "OK", message:"Video Published, workflow successfully completed!"})
+			else
+				app.logger.verbose "Activity #{request.task.id} responded in error, cancelling..."
+				response.cancel "Activity #{request.task.id} responded in error..."
+		else
+			app.logger.verbose "Activity #{request.task.id} ended with an unknown status of #{request.task.status}... cancelling"
+			response.cancel "Activity #{request.task.id} ended with an unknown status of #{request.task.status}... cancelling"
+
 
 
 app.listen()
