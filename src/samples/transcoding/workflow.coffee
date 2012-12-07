@@ -1,6 +1,17 @@
 wfl = require '../../lib/wfl'
 inspect = require('eyes').inspector();
 
+AWS = require 'aws-sdk'
+
+awsCfg = 
+    'accessKeyId' : process.env.AWS_ACCESS_KEY
+    'secretAccessKey' : process.env.AWS_SECRET_KEY
+
+AWS.config.update(awsCfg);
+S3 = new AWS.S3 
+s3client = S3.client 
+
+
 options = 
 	domain: "demos"
 	name: "transcoder"
@@ -8,8 +19,14 @@ options =
 app = wfl(options)
 
 app.useActivity "checkVideo", (request, response)->
-	app.logger.verbose "#{request.id} - Checking video: #{request.input.url}"
-	response.send {status: "OK", message:"Found Video in S3", size:1257}
+	app.logger.verbose "#{request.id} - Checking video: #{request.input.bucket}/#{request.input.filename}"
+	req = s3client.headObject({Bucket: request.input.bucket, Key:request.input.filename})
+	req.done (resp)->
+		inspect resp.data
+		response.send {status: "OK", message:"Found Video in S3", size:resp.data.ContentLength}
+	req.fail (resp)->
+		response.send {status: "NOK", message:"Video not found in S3", error:resp.error}
+
 
 app.useActivity "shortenVideo", (request, response)->
 	app.logger.verbose "#{request.id} - Shortening video: #{request.input.url}"
@@ -34,28 +51,25 @@ app.useActivity "publishVideo", (request, response)->
 
 app.makeDecision "/start", (request, response)->
 	app.logger.verbose "Sceduling activity checkVideo"
-	response.scheduleActivity "checkVideo", {url: request.input.url}
+	response.scheduleActivity "checkVideo", request.input
 
 app.makeDecision "/start/checkVideo", (request, response)->
-	app.logger.verbose "Activity #{request.task.id} responded with the following status: #{request.task.status}"
 	switch request.task.status
-		when "SCHEDULED", "STARTED" 
-			response.wait()
 		when "TIMED_OUT"
-			app.logger.verbose "Activity #{request.task.id} timed out, cancelling the workflow"
+			app.logger.warn "Activity #{request.task.id} timed out, cancelling the workflow"
 			response.cancel("Activity #{request.task.id} timed out")
 		when "COMPLETED"
 			app.logger.verbose "Activity #{request.task.id} completed, checking result..."
 			if request.task.result.status is "OK"
-				if request.task.result.size > 128
-					app.logger.verbose "Sceduling activity shortenVideo"
-					response.scheduleActivity "shortenVideo", {url:request.input.url}
+				if request.task.result.size > 50*1024*1024 #50MB
+					app.logger.verbose "Scheduling activity shortenVideo"
+					response.scheduleActivity "shortenVideo", request.input
 				else
-					app.logger.verbose "Sceduling activity catCheck"
-					response.scheduleActivity "catCheck", {url:request.input.url}
+					app.logger.verbose "Scheduling activity catCheck"
+					response.scheduleActivity "catCheck", request.input
 			else
-				app.logger.verbose "Activity #{request.task.id} responded in error, cancelling..."
-				response.cancel "Activity #{request.task.id} responded in error..."
+				app.logger.warn "Activity #{request.task.id} responded in error, (#{request.task.result.error.code} - #{request.task.result.error.message}) cancelling..."
+				response.cancel "Activity #{request.task.id} responded in error: #{request.task.result.error.code} - #{request.task.result.error.message}"
 		else
 			app.logger.verbose "Activity #{request.task.id} ended with an unknown status of #{request.task.status}... cancelling"
 			response.cancel "Activity #{request.task.id} ended with an unknown status of #{request.task.status}... cancelling"

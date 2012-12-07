@@ -1,10 +1,9 @@
 inspect = require('eyes').inspector()
 path = require 'path'
 spawn = require('child_process').spawn
-awssum = require 'awssum'
-amazon = awssum.load('amazon/amazon')
-Swf = awssum.load('amazon/swf').Swf
 checkUtils = require './utils/checks'
+
+AWS = require 'aws-sdk'
 
 DecisionResponse = require("./models/DecisionResponse").DecisionResponse
 ActivityResponse = require("./models/ActivityResponse").ActivityResponse
@@ -45,7 +44,8 @@ class Application
 		    'secretAccessKey' : @options.secretAccessKey
 		    'region' : @options.region
 
-		@swf = new Swf swfCfg
+		AWS.config.update(swfCfg);
+		@swf = new AWS.SimpleWorkflow #swfCfg
 		winston = require 'winston'
 		@logger = new (winston.Logger)({
     		transports: [
@@ -58,14 +58,7 @@ class Application
 
 
 	useActivity: (name, activityFn)->
-#		swfCfg = 
-#		    'accessKeyId' : @options.accessKeyId
-#		    'secretAccessKey' : @options.secretAccessKey
-#		    'region' : @options.region
-#		localSwfClient = new Swf swfCfg
-#		localSwfClient.internalID = name
 		@options.activities.push new Activity @, name, activityFn
-		# {"name":name, "taskList": "#{name}-default-tasklist", "activityTask": activityFn, "swfClient":}
 
 	makeDecision: (route, decisionFn)->
 		@options.decider.addDecision route, decisionFn #routes.push {"route":route, "decisionTask": decisionFn}
@@ -76,13 +69,13 @@ class Application
 			if typeof inputValue isnt "string"
 				inputValue = "" + JSON.stringify inputValue
 			swfCfg = 
-				"Domain": @options.domain,
-				"WorkflowId": @options.name+"-"+((Math.random()+"").substr(2)),
-				"WorkflowType": {"name": @options.name, "version": "1.0"},
-				"Input": inputValue
-			@swf.StartWorkflowExecution swfCfg, (err, data)=>
-				@logger.error "Unexpected error starting workflow", err if err?
-				@logger.info "Started workflow execution with the following id: #{swfCfg.WorkflowId}" if data?
+				"domain": @options.domain,
+				"workflowId": @options.name+"-"+((Math.random()+"").substr(2)),
+				"workflowType": {"name": @options.name, "version": "1.0"},
+				"input": inputValue
+			@swf.client.startWorkflowExecution(swfCfg).always (response)=>
+				@logger.error "Unexpected error starting workflow", response.error if response.error?
+				@logger.info "Started workflow execution with the following id: #{swfCfg.workflowId}" if response.data?
 
 
 	listen: ()->
@@ -101,13 +94,13 @@ class Application
 		if @configStatus is 0
 			@configStatus = 1
 			@logger.info "Checking config, please wait..."
-			checkUtils.checkDomain @swf, @options.domain, @options.force, (err, data)=>
+			checkUtils.checkDomain @swf.client, @options.domain, @options.force, (err, data)=>
 				if err?
 					@configStatus = 0
 					@logger.error err.message, err.context
 				else
 					@logger.info "Domain #{@options.domain} checked!"
-					checkUtils.checkWorkflow @swf, @options.domain, @options.name, @options.decider.taskList(), @options.force, (errD, dataD)=>
+					checkUtils.checkWorkflow @swf.client, @options.domain, @options.name, @options.decider.taskList(), @options.force, (errD, dataD)=>
 						if errD?
 							@configStatus = 0
 							@logger.error errD.message, errD.context
@@ -121,7 +114,7 @@ class Application
 									i++
 									@logger.info "Activity #{@options.activities[i-1].name} checked!" if i>0
 									if @options.activities[i]?
-										checkUtils.checkActivity @swf, @options.domain, @options.activities[i].name, @options.activities[i].taskList, @options.force, func
+										checkUtils.checkActivity @swf.client, @options.domain, @options.activities[i].name, @options.activities[i].taskList, @options.force, func
 									else
 										@configStatus = 2
 										callBack()

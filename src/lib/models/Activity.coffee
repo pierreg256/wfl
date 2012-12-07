@@ -1,6 +1,5 @@
-awssum = require 'awssum'
-amazon = awssum.load 'amazon/amazon'
-Swf = awssum.load('amazon/swf').Swf;
+
+AWS = require 'aws-sdk'
 
 
 class Response
@@ -11,8 +10,8 @@ class Response
 			result = JSON.stringify(result)
 
 		swfCfg = 
-			"TaskToken": @token
-			"Result": result
+			"taskToken": @token
+			"result": result
 
 		callBack ?=  (err, result)=>
 			if err?
@@ -22,7 +21,7 @@ class Response
 
 
 		@logger.verbose "Sending activity response to SWF..."
-		@swf.RespondActivityTaskCompleted swfCfg, callBack
+		@swf.respondActivityTaskCompleted swfCfg, callBack
 
 	cancel:(result, callBack)->
 		if typeof result isnt "string"
@@ -51,44 +50,49 @@ class Activity
 			'accessKeyId' : @app.options.accessKeyId
 			'secretAccessKey' : @app.options.secretAccessKey
 			'region' : @app.options.region
-		@swf = new Swf swfCfg
+		AWS.config.update(swfCfg);
+		SWF = new AWS.SimpleWorkflow #swfCfg
+		@swf = SWF.client #swfCfg
+
 
 	poll: ()->
 		@app.logger.verbose "Polling for next task for: #{@name} in list:#{@taskList}"
 
 		swfCfg = 
-			'Domain': @app.options.domain
-			'TaskList': 
+			'domain': @app.options.domain
+			'taskList': 
 				"name": @taskList
 
-		@swf.PollForActivityTask swfCfg, (err, data)=>
-			if err?
-				@app.logger.error "Unexpected Error polling #{@taskList} ", err
-				process.exit 1
+		request = @swf.pollForActivityTask swfCfg
+		request.done (response)=>
+			body = response.data
+			token = body.taskToken
+			if not token?
+				@app.logger.verbose "No activity task in the pipe for #{@taskList}, repolling..."
 			else
-				body = data.Body
-				token = body.taskToken
-				if not token?
-					@app.logger.verbose "No activity task in the pipe for #{@taskList}, repolling..."
-				else
-					@app.logger.verbose "New Activity task received for: #{@name} in list:#{@taskList}"
-					request = 
-						name: body.activityType.name
-						id: body.activityId
-						workflowId: body.workflowExecution.workflowId
-						input: ""
-						task: body
-					try
-						request.input = JSON.parse(body.input ? "")
-					catch e
-						request.input = body.input ? {}
+				@app.logger.verbose "New Activity task received for: #{@name} in list:#{@taskList}"
+				request = 
+					name: body.activityType.name
+					id: body.activityId
+					workflowId: body.workflowExecution.workflowId
+					input: ""
+					task: body
+				try
+					request.input = JSON.parse(body.input ? "")
+				catch e
+					request.input = body.input ? {}
 
-					response =  new Response @swf, token, @app.logger
-					@app.logger.verbose "Start running activity: #{@name} with id: #{request.id} "
-					@coreFn request, response
+				activityResponse =  new Response @swf, token, @app.logger
+				@app.logger.verbose "Start running activity: #{@name} with id: #{request.id} "
+				@coreFn request, activityResponse
 
-			process.nextTick ()=>
-				@poll()
+		request.fail (response)=>
+			@app.logger.error "Unexpected Error polling #{@taskList} ", response.error
+			process.exit 1
+
+		request.always (response) =>
+			@poll()
+			
 
 
 

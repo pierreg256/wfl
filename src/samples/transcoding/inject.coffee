@@ -8,8 +8,8 @@ app = wfl(options)
 
 workflowOptions = 
 	my_id: ""+Math.random()
-	fileName:"toto"
-	url:"https://s3-eu-west-1.amazonaws.com/monbucketeu/Bref.S01E05.FRENCH.DVDRiP.XViD-HTO.avi"
+	filename:"long-videos/AMZ_KND_RNV_ANTHEM_060_FRA_005_1024x576.mov"
+	bucket: "pgt-misc"
 
 #setInterval ()->
 app.start workflowOptions
