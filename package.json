@@ -7,7 +7,7 @@
   "main" : "./lib/wfl",
 
   "dependencies": {
-    "awssum"  : "0.10.x",
+    "aws-sdk" : "0.9.x"
     "nconf"   : "0.6.x",
     "winston" : "0.6.x",
     "eyes"    : "*"
@@ -16,6 +16,6 @@
   "homepage": "aws.amazon.com/swf",
 
   "engines": {
-    "node": ">=0.6"
+    "node": ">=0.8"
   }
 }
