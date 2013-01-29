@@ -1,3 +1,12 @@
+### 
+THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR 
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER 
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN 
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+###
+
 wfl = require '../../lib/wfl'
 inspect = require('eyes').inspector()
 myDecisions = require './decisions'
@@ -27,7 +36,6 @@ app.useActivity "checkVideo", (request, response)->
 	req.fail (resp)->
 		response.send {status: "NOK", message:"Video not found in S3", error:resp.error}
 
-
 app.useActivity "shortenVideo", (request, response)->
 	app.logger.verbose "#{request.id} - Shortening video: #{request.input.url}"
 	response.send {status: "OK", message:"Video Shortened successfully"}
@@ -48,7 +56,6 @@ app.useActivity "publishVideo", (request, response)->
 	app.logger.verbose "#{request.id} - Publishing video: #{request.input.url}. sending email to the user"
 	response.send {status: "OK", message:"Video Published"}
 
-
 app.makeDecision "/start", (request, response)->
 	app.logger.verbose "Sceduling activity checkVideo"
 	response.scheduleActivity "checkVideo", request.input
@@ -63,12 +70,6 @@ app.makeDecision "/start/checkVideo/shortenVideo", myDecisions.videoShortened
 app.makeDecision "/start/checkVideo/shortenVideo/catCheck", myDecisions.catChecked
 app.makeDecision "/start/checkVideo/shortenVideo/catCheck/transcodeVideo", myDecisions.videoTranscoded
 app.makeDecision "/start/checkVideo/shortenVideo/catCheck/transcodeVideo/publishVideo", myDecisions.videoPublished
-
-
-
-
-
-
 
 
 app.listen()
